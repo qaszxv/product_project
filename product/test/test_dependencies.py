@@ -1,33 +1,52 @@
 import pytest
+from elasticsearch_dsl.connections import connections
 from product import dependencies
 from product.model import Product
 
 
-def test_storage_create_successful(): 
-    payload = { "name": "Fäustel DIN6475 2000g Eschenstiel FORTIS",
-                "staple_name": "Fortis Fäustel, mit Eschen-Stiel",
-                "description": "Fäustel DIN 6475<br><br>Stahlgeschmiedet, Kopf schwarz lackiert, Bahnen poliert, doppelt geschweifter Eschenstiel mit ozeanblau lackiertem Handende. SP11968 SP11968",
-                "preview_image": "faeustel-din6475-2000g-eschenstiel-fortis-21049292-0-JlHR5nOi-l.jpg",
-                "categories": [
-                  "Fäustel",
-                  "Handwerkzeug",
-                  "Hammer",
-                  "Fäustel"
-                ],
-                "final_gross_price": "1149",
-                "final_net_price": "1003",
-                "url": "/handwerkzeug/fortis-faeustel-mit-eschen-stiel-SP11968",
-                "manufacturer": "Fortis",
-            }
+@pytest.fixture
+def escon(): 
+    return connections.create_connection(hosts=['localhost'], timeout=20)
 
-    storage = dependencies.Storage()
-    product = Product(payload)
-    assert storage.create(product) == product
+@pytest.fixture
+def storage():
+    provider = dependencies.Storage()
+    provider.setup()
+    return provider.get_dependency({})
 
+@pytest.mark.order1
+def test_storage_create_successful(storage, product): 
+    storage.create(product)
+    assert Product.get(using=escon(), id=product.meta.id) == product
 
-def test_storage_create_fail_missing_value():
-    model = { "name": "Fäustel DIN6475 2000g Eschenstiel FORTIS"}
+@pytest.mark.order2
+def test_storage_update_successful(storage): 
+    storage.update(product_id=1, name='New Name', staple_name='New Stapple Name')
+    product = Product.get(using=escon(), id=1, ignore = 404)
+    assert product.name == "New Name"
+    assert product.staple_name == "New Stapple Name"
+    assert product.preview_image == "faeustel-din6475-2000g-eschenstiel-fortis-21049292-0-JlHR5nOi-l.jpg"
+    assert product.categories == [  "Fäustel",
+                                    "Handwerkzeug",
+                                    "Hammer",
+                                    "Fäustel"]
+    assert product.manufacturer == "Fortis"
+    assert product.final_gross_price == 1149
 
-    with pytest.raises(AttributeError): 
-        storage = dependencies.Storage()
-        storage.create(model)
+@pytest.mark.order3
+def test_storage_get_successful(storage): 
+    test_product = storage.get(product_id=1)
+    product = Product.get(using=escon(), id=1, ignore = 404)
+    assert test_product.name == product.name
+
+@pytest.mark.order4
+def test_storage_get_fail_on_not_found(storage): 
+    with pytest.raises(storage.NotFound) as exc:
+        storage.get(2)
+    assert 'Product ID 2 does not exist' == exc.value.args[0]
+    
+# @pytest.mark.order5
+# def test_storage_delete_successful(storage, product):
+#     storage.delete(product)
+#     p = Product.get(using=escon(), id=product.meta.id, ignore = 404)
+#     assert p is None
