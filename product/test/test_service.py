@@ -5,6 +5,7 @@ from nameko.testing.services import entrypoint_waiter
 from marshmallow.exceptions import ValidationError
 
 from product.service import ProductService
+from product.model import Product
 
 
 def test_handle_create_product_success(container_factory, rabbit_config): 
@@ -24,6 +25,16 @@ def test_handle_create_product_success(container_factory, rabbit_config):
                 "manufacturer": "Fortis",
             }
 
+    fake_product = Product(  name = payload['name'],
+                        staple_name = payload['staple_name'],
+                        description = payload['description'],
+                        preview_image = payload['preview_image'],
+                        categories = payload['categories'],
+                        final_gross_price = payload['final_gross_price'],
+                        final_net_price = payload['final_net_price'],
+                        url = payload['url'],
+                        manufacturer = payload['manufacturer'])
+
     container = container_factory(ProductService, rabbit_config)
     container.start()
 
@@ -32,8 +43,7 @@ def test_handle_create_product_success(container_factory, rabbit_config):
     with entrypoint_waiter(container, 'create') as result:
         dispatch("sent_service", "sent_payload", payload)
 
-    product = result.get()
-    assert product['name'] == "Fäustel DIN6475 2000g Eschenstiel FORTIS"
+    assert result.get() == fake_product
 
 
 def test_handle_create_product_fail(container_factory, rabbit_config): 
@@ -47,6 +57,3 @@ def test_handle_create_product_fail(container_factory, rabbit_config):
         with entrypoint_waiter(container, 'create') as result:
             dispatch("sent_service", "sent_payload", payload)
         product = result.get()
-
-
-
