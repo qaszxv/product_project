@@ -2,6 +2,18 @@ import pytest
 from elasticsearch_dsl.connections import connections
 
 from product.model import Product
+from product.dependencies import ELASTICSEARCH_URI
+
+
+@pytest.fixture
+def elasticsearch_config():
+    return {ELASTICSEARCH_URI: 'elasticsearch://localhost:9200'}
+
+@pytest.fixture
+def config(rabbit_config, elasticsearch_config):
+    config = rabbit_config.copy()
+    config.update(elasticsearch_config)
+    return config
 
 
 @pytest.fixture

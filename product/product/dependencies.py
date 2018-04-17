@@ -7,7 +7,8 @@ from product.model import Product
 from product.exceptions import NotFound
 
 
-ELASTICSEARCH_URI = 'localhost:9200'
+# ELASTICSEARCH_URI = 'localhost'
+ELASTICSEARCH_URI = 'ELASTICSEARCH_URI'
 
 
 class StorageWrapper: 
@@ -39,10 +40,11 @@ class StorageWrapper:
         search_client = Elasticsearch()
         s = Search(index=product.meta.index).using(search_client).query("match", _id=product.meta.id)
         response = s.delete()
+        
 
-class Storage(): 
+class Storage(DependencyProvider): 
     def setup(self): 
-        self.client = connections.create_connection(hosts=[ELASTICSEARCH_URI], timeout=20)
+        self.client = connections.create_connection(hosts=self.container.config.get(ELASTICSEARCH_URI), timeout=20)
 
     def get_dependency(self, worker_ctx): 
         return StorageWrapper(self.client)

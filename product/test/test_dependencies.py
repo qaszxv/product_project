@@ -1,5 +1,7 @@
 import pytest
 from elasticsearch_dsl.connections import connections
+from mock import Mock
+
 from product import dependencies
 from product.model import Product
 
@@ -9,8 +11,9 @@ def escon():
     return connections.create_connection(hosts=['localhost'], timeout=20)
 
 @pytest.fixture
-def storage():
+def storage(config):
     provider = dependencies.Storage()
+    provider.container = Mock(config=config)
     provider.setup()
     return provider.get_dependency({})
 
@@ -45,8 +48,8 @@ def test_storage_get_fail_on_not_found(storage):
         storage.get(2)
     assert 'Product ID 2 does not exist' == exc.value.args[0]
     
-# @pytest.mark.order5
-# def test_storage_delete_successful(storage, product):
-#     storage.delete(product)
-#     p = Product.get(using=escon(), id=product.meta.id, ignore = 404)
-#     assert p is None
+@pytest.mark.order5
+def test_storage_delete_successful(storage, product):
+    storage.delete(product)
+    p = Product.get(using=escon(), id=product.meta.id, ignore = 404)
+    assert p is None
