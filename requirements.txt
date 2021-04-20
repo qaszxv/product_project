@@ -18,7 +18,7 @@ nameko==2.8.5
 path.py==11.0.1
 pbr==4.0.2
 pluggy==0.6.0
-py==1.5.3
+py==1.10.0
 pytest==3.5.0
 pytest-ordering==0.5
 python-dateutil==2.7.2
